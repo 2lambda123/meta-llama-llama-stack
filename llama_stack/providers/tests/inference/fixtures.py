@@ -18,6 +18,7 @@ from llama_stack.providers.inline.inference.meta_reference import (
 from llama_stack.providers.inline.inference.vllm import VLLMConfig
 from llama_stack.providers.remote.inference.bedrock import BedrockConfig
 
+from llama_stack.providers.remote.inference.centml import CentMLImplConfig
 from llama_stack.providers.remote.inference.cerebras import CerebrasImplConfig
 from llama_stack.providers.remote.inference.fireworks import FireworksImplConfig
 from llama_stack.providers.remote.inference.groq import GroqConfig
@@ -242,6 +243,24 @@ def inference_sambanova() -> ProviderFixture:
     )
 
 
+def inference_centml() -> ProviderFixture:
+    api_key = os.getenv("CENTML_API_KEY")
+    if not api_key:
+        pytest.skip("Missing CENTML_API_KEY in environment; skipping CentML tests")
+
+    return ProviderFixture(
+        providers=[
+            Provider(
+                provider_id="centml",
+                provider_type="remote::centml",
+                config=CentMLImplConfig(api_key=api_key).model_dump(),
+            )
+        ],
+        provider_data=dict(centml_api_key=api_key),
+    )
+
+
+@pytest.fixture(scope="session")
 def inference_sentence_transformers() -> ProviderFixture:
     return ProviderFixture(
         providers=[
@@ -292,7 +311,11 @@ INFERENCE_FIXTURES = [
     "cerebras",
     "nvidia",
     "tgi",
+<<<<<<< HEAD
     "sambanova",
+=======
+    "centml",
+>>>>>>> 9bce5878 (Add centml as remote inference provider)
 ]
 
 

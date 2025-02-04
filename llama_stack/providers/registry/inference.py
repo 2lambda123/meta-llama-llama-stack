@@ -216,15 +216,23 @@ def available_providers() -> List[ProviderSpec]:
         remote_provider_spec(
             api=Api.inference,
             adapter=AdapterSpec(
-                adapter_type="centml",
+                adapter_type="runpod",
+                pip_packages=["openai"],
+                module="llama_stack.providers.remote.inference.runpod",
+                config_class=
+                "llama_stack.providers.remote.inference.runpod.RunpodImplConfig",
+            ),
+        ),
+        remote_provider_spec(
+            api=Api.inference,
+            adapter=AdapterSpec(
+                adapter_type="sambanova",
                 pip_packages=[
                     "openai",
                 ],
-                module="llama_stack.providers.remote.inference.centml",
+                module="llama_stack.providers.remote.inference.sambanova",
                 config_class=
-                "llama_stack.providers.remote.inference.centml.CentMLImplConfig",
-                provider_data_validator=
-                "llama_stack.providers.remote.inference.centml.CentMLProviderDataValidator",
+                "llama_stack.providers.remote.inference.sambanova.SambaNovaImplConfig",
             ),
         ),
         remote_provider_spec(

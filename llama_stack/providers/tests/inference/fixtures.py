@@ -243,6 +243,7 @@ def inference_sambanova() -> ProviderFixture:
     )
 
 
+@pytest.fixture(scope="session")
 def inference_centml() -> ProviderFixture:
     api_key = os.getenv("CENTML_API_KEY")
     if not api_key:
@@ -311,11 +312,8 @@ INFERENCE_FIXTURES = [
     "cerebras",
     "nvidia",
     "tgi",
-<<<<<<< HEAD
     "sambanova",
-=======
     "centml",
->>>>>>> 9bce5878 (Add centml as remote inference provider)
 ]
 
 

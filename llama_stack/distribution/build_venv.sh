@@ -35,12 +35,10 @@ set -euo pipefail
 
 build_name="$1"
 env_name="llamastack-$build_name"
-build_file_path="$2"
 pip_dependencies="$3"
 
 # Define color codes
 RED='\033[0;31m'
-GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
 # this is set if we actually create a new conda in which case we need to clean up
@@ -49,22 +47,73 @@ ENVNAME=""
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 source "$SCRIPT_DIR/common.sh"
 
+# check if a command is present
+is_present() {
+  command -v "$1" &>/dev/null
+}
+
+# pre-run checks to make sure we can proceed with the installation
+pre_run_checks() {
+  local env_name="$1"
+
+  # checking if uv is installed
+  if ! is_present uv; then
+    echo "uv is not installed, trying to install it."
+    # try to install with pip
+    if ! is_present pip; then
+      echo "pip is not installed, cannot automatically install 'uv'."
+      echo "Follow this link to install it:"
+      echo "https://docs.astral.sh/uv/getting-started/installation/"
+      exit 1
+    else
+      pip install uv
+    fi
+  fi
+
+  # checking if an environment with the same name already exists
+  if [ -d "$env_name" ]; then
+    echo "Environment '$env_name' already exists, please remove it."
+    echo "Remove this directory '$env_name'."
+    exit 1
+  fi
+
+  # checking if we are in a venv and if so, deactivate it
+  if [ -n "$VIRTUAL_ENV" ]; then
+    echo "Deactivating existing virtual environment."
+    if [ -f "$VIRTUAL_ENV/bin/activate" ]; then
+      # re-hydrate the env first to make sure we can deactivate it
+      # shellcheck source=/dev/null
+      source "$VIRTUAL_ENV/bin/activate"
+      deactivate
+    else
+      echo "'deactivate' function not found."
+    fi
+  fi
+}
+
 run() {
   local env_name="$1"
   local pip_dependencies="$2"
   local special_pip_deps="$3"
 
-  pip install uv
+  echo "Creating new virtual environment $env_name"
+  uv venv "$env_name"
+  # shellcheck source=/dev/null
+  source "$env_name/bin/activate"
   if [ -n "$TEST_PYPI_VERSION" ]; then
     # these packages are damaged in test-pypi, so install them first
     uv pip install fastapi libcst
+    # shellcheck disable=SC2086
+    # we are building a command line so word splitting is expected
     uv pip install --extra-index-url https://test.pypi.org/simple/ \
-      llama-models==$TEST_PYPI_VERSION llama-stack==$TEST_PYPI_VERSION \
+      llama-models=="$TEST_PYPI_VERSION" llama-stack=="$TEST_PYPI_VERSION" \
       $pip_dependencies
     if [ -n "$special_pip_deps" ]; then
       IFS='#' read -ra parts <<<"$special_pip_deps"
       for part in "${parts[@]}"; do
         echo "$part"
+        # shellcheck disable=SC2086
+        # we are building a command line so word splitting is expected
         uv pip install $part
       done
     fi
@@ -72,11 +121,11 @@ run() {
     # Re-installing llama-stack in the new conda environment
     if [ -n "$LLAMA_STACK_DIR" ]; then
       if [ ! -d "$LLAMA_STACK_DIR" ]; then
-        printf "${RED}Warning: LLAMA_STACK_DIR is set but directory does not exist: $LLAMA_STACK_DIR${NC}\n" >&2
+        printf "${RED}Warning: LLAMA_STACK_DIR is set but directory does not exist: %s${NC}\n" "$LLAMA_STACK_DIR" >&2
         exit 1
       fi
 
-      printf "Installing from LLAMA_STACK_DIR: $LLAMA_STACK_DIR\n"
+      printf "Installing from LLAMA_STACK_DIR: %s \n"  "$LLAMA_STACK_DIR"
       uv pip install --no-cache-dir -e "$LLAMA_STACK_DIR"
     else
       uv pip install --no-cache-dir llama-stack
@@ -84,26 +133,31 @@ run() {
 
     if [ -n "$LLAMA_MODELS_DIR" ]; then
       if [ ! -d "$LLAMA_MODELS_DIR" ]; then
-        printf "${RED}Warning: LLAMA_MODELS_DIR is set but directory does not exist: $LLAMA_MODELS_DIR${NC}\n" >&2
+        printf "${RED}Warning: LLAMA_MODELS_DIR is set but directory does not exist: %s${NC}\n" "$LLAMA_MODELS_DIR" >&2
         exit 1
       fi
 
-      printf "Installing from LLAMA_MODELS_DIR: $LLAMA_MODELS_DIR\n"
+      printf "Installing from LLAMA_MODELS_DIR: %s \n" "$LLAMA_MODELS_DIR"
       uv pip uninstall llama-models
       uv pip install --no-cache-dir -e "$LLAMA_MODELS_DIR"
     fi
 
     # Install pip dependencies
     printf "Installing pip dependencies\n"
+    # shellcheck disable=SC2086
+    # we are building a command line so word splitting is expected
     uv pip install $pip_dependencies
     if [ -n "$special_pip_deps" ]; then
       IFS='#' read -ra parts <<<"$special_pip_deps"
       for part in "${parts[@]}"; do
         echo "$part"
+        # shellcheck disable=SC2086
+        # we are building a command line so word splitting is expected
         uv pip install $part
       done
     fi
   fi
 }
 
+pre_run_checks "$env_name"
 run "$env_name" "$pip_dependencies" "$special_pip_deps"

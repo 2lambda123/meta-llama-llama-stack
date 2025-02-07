@@ -40,12 +40,20 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-asyncio",
-    "nbval",            # For notebook testing
+    "nbval",                      # For notebook testing
     "black",
     "ruff",
     "types-requests",
     "types-setuptools",
     "pre-commit",
+    "pytest-html",
+    "openai",
+    "aiosqlite",
+    "ollama",
+    "torch>=2.6.0",
+    "fairscale>=0.4.13",
+    "torchvision>=0.21.0",
+    "lm-format-enforcer>=0.10.9",
 ]
 docs = [
     "sphinx-autobuild",
